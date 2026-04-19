@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Extrusion Die Optimiser — IIT Guwahati</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="src/ui/styles.css" />
+</head>
+<body>
+
+  <div class="grain-overlay"></div>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <span class="brand-badge">IIT Guwahati · Mech Eng</span>
+        <h1 class="brand-title">Extrusion Die <em>Optimiser</em></h1>
+      </div>
+      <div class="header-meta">
+        <span>Multi-Scale Geometric Optimisation</span>
+        <span class="dot-sep">·</span>
+        <span>Avitzur + Upper Bound + Slab Method</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ── INPUT PANEL ─────────────────────────────────────── -->
+    <section class="panel panel-inputs" id="panel-inputs">
+
+      <div class="panel-block">
+        <p class="block-label">01 / Geometry</p>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="r_in">Initial billet radius R<sub>i</sub></label>
+            <div class="input-unit-wrap">
+              <input type="number" id="r_in" value="50" min="1" max="500" step="0.5" />
+              <span class="unit">mm</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="r_out">Final extrudate radius R<sub>f</sub></label>
+            <div class="input-unit-wrap">
+              <input type="number" id="r_out" value="20" min="0.5" max="499" step="0.5" />
+              <span class="unit">mm</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="temp_slider">Process temperature</label>
+          <div class="slider-row">
+            <input type="range" id="temp_slider" min="20" max="1300" value="300" step="10" />
+            <output id="temp_out" for="temp_slider">300 °C</output>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="speed_slider">Extrusion speed</label>
+          <div class="slider-row">
+            <input type="range" id="speed_slider" min="1" max="500" value="10" step="1" />
+            <output id="speed_out" for="speed_slider">10 mm/s</output>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="back_p">Back pressure</label>
+          <div class="slider-row">
+            <input type="range" id="back_p" min="0" max="200" value="0" step="5" />
+            <output id="back_p_out" for="back_p">0 MPa</output>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-block">
+        <p class="block-label">02 / Material</p>
+        <div class="field">
+          <label for="material">Material</label>
+          <select id="material">
+            <optgroup label="Aluminium Alloys">
+              <option value="al1100">Al-1100 (pure aluminium)</option>
+              <option value="al6061" selected>Al-6061-T6</option>
+              <option value="al7075">Al-7075-T6</option>
+              <option value="al2024">Al-2024-T4</option>
+            </optgroup>
+            <optgroup label="Copper Alloys">
+              <option value="cu_pure">Copper (pure)</option>
+              <option value="cu_brass">Brass (70/30)</option>
+            </optgroup>
+            <optgroup label="Steel">
+              <option value="steel_mild">Mild Steel (AISI 1020)</option>
+              <option value="steel_ss304">Stainless Steel 304</option>
+              <option value="steel_h13">H-13 Tool Steel</option>
+            </optgroup>
+            <optgroup label="Titanium">
+              <option value="ti6al4v">Ti-6Al-4V</option>
+            </optgroup>
+            <optgroup label="Polymers">
+              <option value="pla">PLA</option>
+              <option value="pp">Polypropylene (PP)</option>
+              <option value="abs">ABS</option>
+            </optgroup>
+            <optgroup label="Lead">
+              <option value="lead">Lead (pure)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="field" id="mat-props-display">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <div class="panel-block">
+        <p class="block-label">03 / Lubricant</p>
+        <div class="field">
+          <label for="lubricant">Interface condition</label>
+          <select id="lubricant">
+            <option value="dry">Dry — no lubricant</option>
+            <option value="moly">Molybdenum disulfide (MoS₂)</option>
+            <option value="sodium_stearate" selected>Sodium stearate (soap)</option>
+            <option value="graphite">Graphite grease</option>
+            <option value="mineral_oil">Mineral oil</option>
+            <option value="ptfe">PTFE / Teflon coating</option>
+            <option value="zinc_phos">Zinc phosphate + soap</option>
+            <option value="glass">Glass lubricant (high-temp)</option>
+          </select>
+        </div>
+        <div class="field" id="lub-props-display">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <button class="compute-btn" id="calc_btn">
+        <span class="btn-label">Compute Optimal Die</span>
+        <span class="btn-arrow">→</span>
+      </button>
+
+    </section>
+
+    <!-- ── RESULTS PANEL ───────────────────────────────────── -->
+    <section class="panel panel-results" id="panel-results">
+
+      <div class="results-placeholder" id="results-placeholder">
+        <div class="placeholder-inner">
+          <div class="placeholder-icon">◎</div>
+          <p>Configure inputs and compute to see results</p>
+        </div>
+      </div>
+
+      <div class="results-content hidden" id="results-content">
+
+        <div id="alerts-row"></div>
+
+        <div class="metrics-grid" id="metrics-grid"></div>
+
+        <!-- Tabs -->
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="profile">Die Profile</button>
+          <button class="tab-btn" data-tab="energy">Energy Breakdown</button>
+          <button class="tab-btn" data-tab="params">All Parameters</button>
+          <button class="tab-btn" data-tab="theory">Theory</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-profile">
+          <div class="chart-legend" id="profile-legend"></div>
+          <div class="chart-wrap" style="height:320px;">
+            <canvas id="profileChart" role="img" aria-label="Die profile comparison: curved streamlined vs conical.">Die profile chart</canvas>
+          </div>
+          <div class="profile-summary" id="profile-summary"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-energy">
+          <div class="chart-wrap" style="height:300px;">
+            <canvas id="energyChart" role="img" aria-label="Energy component breakdown for conical and curved dies.">Energy chart</canvas>
+          </div>
+          <div class="energy-table-wrap" id="energy-table-wrap"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-params">
+          <div class="params-grid" id="params-grid"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-theory">
+          <div class="theory-content" id="theory-content"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <span>Spandan Mhapsekar (240103103) &amp; Shlok Pratap Singh (240103099)</span>
+    <span class="dot-sep">·</span>
+    <span>Department of Mechanical Engineering, IIT Guwahati</span>
+    <span class="dot-sep">·</span>
+    <span>April 2026</span>
+  </footer>
+
+  <!-- Scripts — loaded in dependency order -->
+  <script src="src/data/materials.js"></script>
+  <script src="src/data/lubricants.js"></script>
+  <script src="src/physics/solver.js"></script>
+  <script src="src/physics/profile.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="src/charts/profileChart.js"></script>
+  <script src="src/charts/energyChart.js"></script>
+  <script src="src/ui/metrics.js"></script>
+  <script src="src/ui/alerts.js"></script>
+  <script src="src/ui/params.js"></script>
+  <script src="src/ui/theory.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
