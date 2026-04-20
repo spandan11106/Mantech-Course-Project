@@ -53,6 +53,18 @@
         </div>
 
         <div class="field">
+          <label for="die_angle_slider">Die semi-angle α <span id="die_angle_mode">(auto-optimised)</span></label>
+          <div class="slider-row">
+            <input type="range" id="die_angle_slider" min="1" max="90" value="30" step="0.5" />
+            <output id="die_angle_out" for="die_angle_slider">30°</output>
+          </div>
+          <div class="angle-mode-toggle">
+            <button id="angle_auto_btn" class="mode-btn active" title="Use Avitzur optimal angle">Auto</button>
+            <button id="angle_manual_btn" class="mode-btn" title="Manually set die angle">Manual</button>
+          </div>
+        </div>
+
+        <div class="field">
           <label for="temp_slider">Process temperature</label>
           <div class="slider-row">
             <input type="range" id="temp_slider" min="20" max="1300" value="300" step="10" />
@@ -82,32 +94,7 @@
         <div class="field">
           <label for="material">Material</label>
           <select id="material">
-            <optgroup label="Aluminium Alloys">
-              <option value="al1100">Al-1100 (pure aluminium)</option>
-              <option value="al6061" selected>Al-6061-T6</option>
-              <option value="al7075">Al-7075-T6</option>
-              <option value="al2024">Al-2024-T4</option>
-            </optgroup>
-            <optgroup label="Copper Alloys">
-              <option value="cu_pure">Copper (pure)</option>
-              <option value="cu_brass">Brass (70/30)</option>
-            </optgroup>
-            <optgroup label="Steel">
-              <option value="steel_mild">Mild Steel (AISI 1020)</option>
-              <option value="steel_ss304">Stainless Steel 304</option>
-              <option value="steel_h13">H-13 Tool Steel</option>
-            </optgroup>
-            <optgroup label="Titanium">
-              <option value="ti6al4v">Ti-6Al-4V</option>
-            </optgroup>
-            <optgroup label="Polymers">
-              <option value="pla">PLA</option>
-              <option value="pp">Polypropylene (PP)</option>
-              <option value="abs">ABS</option>
-            </optgroup>
-            <optgroup label="Lead">
-              <option value="lead">Lead (pure)</option>
-            </optgroup>
+            <!-- Populated dynamically by main.js -->
           </select>
         </div>
 
@@ -121,14 +108,7 @@
         <div class="field">
           <label for="lubricant">Interface condition</label>
           <select id="lubricant">
-            <option value="dry">Dry — no lubricant</option>
-            <option value="moly">Molybdenum disulfide (MoS₂)</option>
-            <option value="sodium_stearate" selected>Sodium stearate (soap)</option>
-            <option value="graphite">Graphite grease</option>
-            <option value="mineral_oil">Mineral oil</option>
-            <option value="ptfe">PTFE / Teflon coating</option>
-            <option value="zinc_phos">Zinc phosphate + soap</option>
-            <option value="glass">Glass lubricant (high-temp)</option>
+            <!-- Populated dynamically by main.js -->
           </select>
         </div>
         <div class="field" id="lub-props-display">

@@ -20,6 +20,11 @@
   const elSpeedOut  = document.getElementById('speed_out');
   const elBackP     = document.getElementById('back_p');
   const elBackPOut  = document.getElementById('back_p_out');
+  const elDieAngle  = document.getElementById('die_angle_slider');
+  const elDieAngleOut = document.getElementById('die_angle_out');
+  const elAngleModeDisplay = document.getElementById('die_angle_mode');
+  const elAngleAutoBtn = document.getElementById('angle_auto_btn');
+  const elAngleManualBtn = document.getElementById('angle_manual_btn');
   const elMaterial  = document.getElementById('material');
   const elLubricant = document.getElementById('lubricant');
   const elCalcBtn   = document.getElementById('calc_btn');
@@ -28,6 +33,10 @@
   const elResultsContent = document.getElementById('results-content');
   const elMatProps       = document.getElementById('mat-props-display');
   const elLubProps       = document.getElementById('lub-props-display');
+
+  // ── Angle mode state ────────────────────────────────────────
+  let angleMode = 'auto'; // 'auto' or 'manual'
+  let lastComputedResult = null; // Store results for profile regeneration
 
   // ── Slider live readouts ────────────────────────────────────
   elTemp.addEventListener('input', () => {
@@ -41,6 +50,166 @@
   elBackP.addEventListener('input', () => {
     elBackPOut.value = `${elBackP.value} MPa`;
   });
+
+  // ── Die angle slider ────────────────────────────────────────
+  elDieAngle.addEventListener('input', () => {
+    elDieAngleOut.value = `${elDieAngle.value}°`;
+    // Update profile dynamically if in manual mode and results exist
+    if (angleMode === 'manual' && lastComputedResult) {
+      updateProfileWithCustomAngle();
+    }
+  });
+
+  // ── Angle mode toggle buttons ───────────────────────────────
+  elAngleAutoBtn.addEventListener('click', () => {
+    if (angleMode === 'auto') return;
+    angleMode = 'auto';
+    elAngleAutoBtn.classList.add('active');
+    elAngleManualBtn.classList.remove('active');
+    elDieAngle.disabled = true;
+    elAngleModeDisplay.textContent = '(auto-optimised)';
+    // Recompute with optimal angle
+    if (lastComputedResult) runCompute();
+  });
+
+  elAngleManualBtn.addEventListener('click', () => {
+    if (angleMode === 'manual') return;
+    angleMode = 'manual';
+    elAngleManualBtn.classList.add('active');
+    elAngleAutoBtn.classList.remove('active');
+    elDieAngle.disabled = false;
+    elAngleModeDisplay.textContent = '(manually set)';
+    // Update profile with manually set angle
+    if (lastComputedResult) updateProfileWithCustomAngle();
+  });
+
+  // ── Populate materials dropdown ─────────────────────────────
+  function populateMaterialsDropdown() {
+    const select = document.getElementById('material');
+    if (!select) return;
+
+    // Group materials by type/category
+    const groups = {
+      'Aluminum Alloys': [],
+      'Carbon & Alloy Steels': [],
+      'Stainless Steels': [],
+      'Copper & Brass': [],
+      'Titanium & Exotic': [],
+      'Polymers': []
+    };
+
+    // Categorize materials
+    Object.entries(MATERIALS).forEach(([key, mat]) => {
+      if (mat.name.includes('Aluminum') || mat.name.includes('Al')) {
+        groups['Aluminum Alloys'].push({ key, name: mat.name });
+      } else if (mat.name.includes('Stainless') || mat.name.includes('SS') || mat.name.includes('Stainless Steel') ) {
+        groups['Stainless Steels'].push({ key, name: mat.name });
+      } else if ((mat.type === 'metal' && mat.sy0 >= 600 && mat.sy0 <= 750) || mat.name.includes('Steel')) {
+        groups['Carbon & Alloy Steels'].push({ key, name: mat.name });
+      } else if (mat.name.includes('Copper') || mat.name.includes('Brass') || mat.name.includes('Bronze') || mat.name.includes('Cu')) {
+        groups['Copper & Brass'].push({ key, name: mat.name });
+      } else if (mat.name.includes('Titanium') || mat.name.includes('Ti') || mat.name.includes('Magnesium') || mat.name.includes('Inconel') || mat.name.includes('Monel') || mat.name.includes('Hastelloy') || mat.name.includes('Tungsten') || mat.name.includes('Zinc') || mat.name.includes('Lead') || mat.name.includes('Carbide')) {
+        groups['Titanium & Exotic'].push({ key, name: mat.name });
+      } else if (mat.type === 'polymer') {
+        groups['Polymers'].push({ key, name: mat.name });
+      }
+    });
+
+    // Build HTML with optgroups
+    let html = '';
+    Object.entries(groups).forEach(([groupName, materials]) => {
+      if (materials.length > 0) {
+        html += `<optgroup label="${groupName}">`;
+        materials.forEach(({ key, name }) => {
+          html += `<option value="${key}">${name}</option>`;
+        });
+        html += '</optgroup>';
+      }
+    });
+
+    select.innerHTML = html;
+    // Select first available material
+    select.value = Object.keys(MATERIALS)[0];
+    updateMaterialChips();
+    updateLubricantDropdown();
+  }
+
+  // ── Populate lubricants dropdown with tiered ranking ──
+  function updateLubricantDropdown() {
+    const select = document.getElementById('lubricant');
+    if (!select) return;
+
+    const currentMaterial = MATERIALS[elMaterial.value];
+    if (!currentMaterial) return;
+
+    const materialType = currentMaterial.type;
+    const top5 = [];
+    const moderate5 = [];
+    const others = [];
+
+    // Rank lubricants based on compatibility score for this material type
+    Object.entries(LUBRICANTS).forEach(([key, lub]) => {
+      if (!lub.compatible || !lub.compatible.includes(materialType)) {
+        // Not compatible at all
+        others.push({ key, name: lub.name, score: 0 });
+        return;
+      }
+
+      const score = lub.score[materialType] || 0;
+      
+      if (score >= 8) {
+        // Top 5 - excellent choices
+        top5.push({ key, name: lub.name, score });
+      } else if (score >= 5) {
+        // Moderate 5 - acceptable alternatives
+        moderate5.push({ key, name: lub.name, score });
+      } else {
+        // Others - not recommended
+        others.push({ key, name: lub.name, score });
+      }
+    });
+
+    // Sort each category by score (descending)
+    top5.sort((a, b) => b.score - a.score);
+    moderate5.sort((a, b) => b.score - a.score);
+    others.sort((a, b) => b.score - a.score);
+
+    // Limit to 5 each for top and moderate
+    const top5Limited = top5.slice(0, 5);
+    const moderate5Limited = moderate5.slice(0, 5);
+
+    // Build HTML with three tiers
+    let html = '';
+    
+    if (top5Limited.length > 0) {
+      html += '<optgroup label="★ Top Recommended (Best for this material)">';
+      top5Limited.forEach(({ key, name }) => {
+        html += `<option value="${key}">${name}</option>`;
+      });
+      html += '</optgroup>';
+    }
+
+    if (moderate5Limited.length > 0) {
+      html += '<optgroup label="⊙ Moderate (Acceptable alternatives)">';
+      moderate5Limited.forEach(({ key, name }) => {
+        html += `<option value="${key}">${name}</option>`;
+      });
+      html += '</optgroup>';
+    }
+
+    if (others.length > 0) {
+      html += '<optgroup label="○ Others (Not recommended)">';
+      others.forEach(({ key, name }) => {
+        html += `<option value="${key}">${name}</option>`;
+      });
+      html += '</optgroup>';
+    }
+
+    select.innerHTML = html;
+    // Select first top recommendation if available
+    select.value = top5Limited.length > 0 ? top5Limited[0].key : Object.keys(LUBRICANTS)[0];
+    updateLubricantChips();
+  }
 
   // ── Material property chips ─────────────────────────────────
   function updateMaterialChips() {
@@ -59,20 +228,42 @@
 
   function updateLubricantChips() {
     const lub = LUBRICANTS[elLubricant.value];
+    const mat = MATERIALS[elMaterial.value];
     if (!lub || !elLubProps) return;
+    
+    const materialType = mat.type;
+    const score = lub.score[materialType] || 0;
+    const isCompatible = lub.compatible && lub.compatible.includes(materialType);
+    
+    let compatibilityBadge = '';
+    if (!isCompatible) {
+      compatibilityBadge = '<span class="compat-badge compat-no">✗ Not compatible</span>';
+    } else if (score >= 8) {
+      compatibilityBadge = '<span class="compat-badge compat-excellent">★ Top Recommended</span>';
+    } else if (score >= 5) {
+      compatibilityBadge = '<span class="compat-badge compat-moderate">⊙ Acceptable Alternative</span>';
+    } else {
+      compatibilityBadge = '<span class="compat-badge compat-poor">○ Not Recommended</span>';
+    }
+    
     elLubProps.innerHTML = `
       <div class="props-chips">
         <span class="prop-chip">m <span>${lub.m}</span></span>
         <span class="prop-chip">μ <span>${lub.mu}</span></span>
         <span class="prop-chip">T range <span>${lub.temp_range[0]}–${lub.temp_range[1]}°C</span></span>
+        ${compatibilityBadge}
       </div>
     `;
   }
 
-  elMaterial.addEventListener('change', updateMaterialChips);
+  elMaterial.addEventListener('change', () => {
+    updateMaterialChips();
+    updateLubricantDropdown();
+  });
   elLubricant.addEventListener('change', updateLubricantChips);
-  updateMaterialChips();
-  updateLubricantChips();
+  
+  // Initialize dropdowns and chips on page load
+  populateMaterialsDropdown();
 
   // ── Tab switching ───────────────────────────────────────────
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -87,6 +278,29 @@
       if (panel) panel.classList.add('active');
     });
   });
+
+  // ── Update profile with custom/manual angle ─────────────────
+  function updateProfileWithCustomAngle() {
+    if (!lastComputedResult) return;
+
+    const customAngle = parseFloat(elDieAngle.value);
+    const res = lastComputedResult;
+
+    // Recalculate L_die based on custom angle
+    const L_die_custom = (res.R_in - res.R_out) / Math.tan(customAngle * Math.PI / 180);
+
+    // Generate new profile with custom angle
+    const profileCustom = ProfileGenerator.generate(
+      res.R_in,
+      res.R_out,
+      L_die_custom,
+      150
+    );
+
+    // Update chart and summary with new profile
+    ProfileChart.render(profileCustom);
+    renderProfileSummary(profileCustom, { ...res, L_die: L_die_custom });
+  }
 
   // ── Profile summary cards ───────────────────────────────────
   function renderProfileSummary(profile, res) {
@@ -145,8 +359,14 @@
       requestAnimationFrame(() => {
         // ── 1. Run physics solver ─────────────────────────────
         const result = Solver.compute(inputs);
+        lastComputedResult = result; // Store for dynamic angle updates
 
-        // ── 2. Generate die profiles ──────────────────────────
+        // ── 2. Update angle slider with computed optimal angle ──
+        const optimalAngleDeg = result.alpha_conical;
+        elDieAngle.value = optimalAngleDeg.toFixed(1);
+        elDieAngleOut.value = `${optimalAngleDeg.toFixed(1)}°`;
+
+        // ── 3. Generate die profiles ──────────────────────────
         const profile = ProfileGenerator.generate(
           result.R_in,
           result.R_out,
@@ -154,7 +374,7 @@
           150
         );
 
-        // ── 3. Render all UI sections ─────────────────────────
+        // ── 4. Render all UI sections ─────────────────────────
         MetricsUI.render(result);
         AlertsUI.render(result);
         ProfileChart.render(profile);
@@ -163,11 +383,11 @@
         ParamsUI.render(result);
         TheoryUI.render(result);
 
-        // ── 4. Show results panel ─────────────────────────────
+        // ── 5. Show results panel ─────────────────────────────
         elPlaceholder.classList.add('hidden');
         elResultsContent.classList.remove('hidden');
 
-        // ── 5. Clear loading state ────────────────────────────
+        // ── 6. Clear loading state ────────────────────────────
         elCalcBtn.classList.remove('loading');
         elCalcBtn.disabled = false;
 
@@ -210,6 +430,11 @@
       if (e.key === 'Enter') runCompute();
     });
   });
+
+  // ── Initialize angle slider state ───────────────────────────
+  elDieAngle.disabled = true; // Start in auto mode
+  elAngleAutoBtn.classList.add('active');
+  elAngleManualBtn.classList.remove('active');
 
   // ── Run once on load with default values ────────────────────
   runCompute();

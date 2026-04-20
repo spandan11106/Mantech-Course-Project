@@ -321,6 +321,15 @@ input[type="range"]:hover::-moz-range-thumb {
   box-shadow: 0 4px 12px rgba(232,197,71,0.6);
 }
 
+input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+input[type="range"]:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+}
+
 output {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -329,6 +338,42 @@ output {
   min-width: 64px;
   text-align: right;
   white-space: nowrap;
+}
+
+/* ── Angle mode toggle buttons ─────────────────────────── */
+.angle-mode-toggle {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.mode-btn:hover {
+  border-color: var(--accent);
+  background: var(--bg-3);
+  color: var(--accent);
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, var(--accent) 0%, #d4a83d 100%);
+  border-color: rgba(232,197,71,0.6);
+  color: #0d0e0f;
+  box-shadow: 0 2px 8px rgba(232,197,71,0.25);
 }
 
 /* ── Mini property chips ───────────────────────────────── */
@@ -358,6 +403,41 @@ output {
 }
 
 .prop-chip span { color: inherit; font-weight: 600; }
+
+/* ── Compatibility badges (tiered) ────────────────────── */
+.compat-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: all var(--transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.compat-excellent {
+  background: rgba(77,184,122,0.15);
+  border: 1px solid rgba(77,184,122,0.5);
+  color: #52c07e;
+}
+
+.compat-moderate {
+  background: rgba(232,197,71,0.12);
+  border: 1px solid rgba(232,197,71,0.4);
+  color: #f0d86a;
+}
+
+.compat-poor {
+  background: rgba(200,150,100,0.12);
+  border: 1px solid rgba(200,150,100,0.4);
+  color: #d4944a;
+}
+
+.compat-no {
+  background: var(--red-dim);
+  border: 1px solid rgba(224,92,92,0.4);
+  color: var(--red);
+}
 
 /* ── Compute button ────────────────────────────────────── */
 .compute-btn {
