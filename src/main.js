@@ -137,36 +137,51 @@
     }
 
     try {
-      // ── 1. Run physics solver ─────────────────────────────
-      const result = Solver.compute(inputs);
+      // ── Show loading state ────────────────────────────────
+      elCalcBtn.classList.add('loading');
+      elCalcBtn.disabled = true;
+      
+      // Use requestAnimationFrame to ensure loading state is visible
+      requestAnimationFrame(() => {
+        // ── 1. Run physics solver ─────────────────────────────
+        const result = Solver.compute(inputs);
 
-      // ── 2. Generate die profiles ──────────────────────────
-      const profile = ProfileGenerator.generate(
-        result.R_in,
-        result.R_out,
-        result.L_die,
-        150
-      );
+        // ── 2. Generate die profiles ──────────────────────────
+        const profile = ProfileGenerator.generate(
+          result.R_in,
+          result.R_out,
+          result.L_die,
+          150
+        );
 
-      // ── 3. Render all UI sections ─────────────────────────
-      MetricsUI.render(result);
-      AlertsUI.render(result);
-      ProfileChart.render(profile);
-      EnergyChart.render(result.energy_conical, result.energy_curved);
-      renderProfileSummary(profile, result);
-      ParamsUI.render(result);
-      TheoryUI.render(result);
+        // ── 3. Render all UI sections ─────────────────────────
+        MetricsUI.render(result);
+        AlertsUI.render(result);
+        ProfileChart.render(profile);
+        EnergyChart.render(result.energy_conical, result.energy_curved);
+        renderProfileSummary(profile, result);
+        ParamsUI.render(result);
+        TheoryUI.render(result);
 
-      // ── 4. Show results panel ─────────────────────────────
-      elPlaceholder.classList.add('hidden');
-      elResultsContent.classList.remove('hidden');
+        // ── 4. Show results panel ─────────────────────────────
+        elPlaceholder.classList.add('hidden');
+        elResultsContent.classList.remove('hidden');
 
-      // Scroll to results on mobile
-      if (window.innerWidth < 1000) {
-        document.getElementById('panel-results').scrollIntoView({ behavior: 'smooth' });
-      }
+        // ── 5. Clear loading state ────────────────────────────
+        elCalcBtn.classList.remove('loading');
+        elCalcBtn.disabled = false;
+
+        // Scroll to results on mobile
+        if (window.innerWidth < 1000) {
+          document.getElementById('panel-results').scrollIntoView({ behavior: 'smooth' });
+        }
+      });
 
     } catch (err) {
+      // ── Clear loading state on error ──────────────────────
+      elCalcBtn.classList.remove('loading');
+      elCalcBtn.disabled = false;
+      
       showError(`Computation error: ${err.message}`);
       console.error(err);
     }
